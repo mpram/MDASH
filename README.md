@@ -177,6 +177,9 @@ Notes:
 - Thresholds accept 0.01 to 1000 (percent of the amount). Add a block with
   `"thresholdType": "Forecasted"` for early warning before actual spend hits the limit.
 - To budget the whole resource group instead of one resource, delete the `filter` block.
+- Keep the whole `az rest` on a single line and the URL in double quotes. If the
+  `?api-version=2023-11-01` is dropped (URL wrapped or unquoted), Azure returns
+  `MissingApiVersionParameter`.
 
 ## Optional: hard stop at the cost limit
 

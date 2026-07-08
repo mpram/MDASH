@@ -1,0 +1,48 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "Creates a Cost Management budget scoped (via ResourceId filter) to a single Azure AI Foundry resource, with email alerts. Deploy at the resource group that contains the resource. Replace <RESOURCE_ID> and <EMAIL>, and adjust amount/dates as needed."
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Consumption/budgets",
+      "apiVersion": "2023-11-01",
+      "name": "FoundryBudget",
+      "properties": {
+        "category": "Cost",
+        "amount": 1000,
+        "timeGrain": "Monthly",
+        "timePeriod": {
+          "startDate": "2026-07-01T00:00:00Z",
+          "endDate": "2028-06-30T00:00:00Z"
+        },
+        "filter": {
+          "dimensions": {
+            "name": "ResourceId",
+            "operator": "In",
+            "values": [
+              "<RESOURCE_ID>"
+            ]
+          }
+        },
+        "notifications": {
+          "Actual_90_Percent": {
+            "enabled": true,
+            "operator": "GreaterThanOrEqualTo",
+            "threshold": 90,
+            "thresholdType": "Actual",
+            "contactEmails": [ "<EMAIL>" ]
+          },
+          "Actual_100_Percent": {
+            "enabled": true,
+            "operator": "GreaterThanOrEqualTo",
+            "threshold": 100,
+            "thresholdType": "Actual",
+            "contactEmails": [ "<EMAIL>" ]
+          }
+        }
+      }
+    }
+  ]
+}

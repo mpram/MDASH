@@ -181,6 +181,22 @@ Notes:
   `?api-version=2023-11-01` is dropped (URL wrapped or unquoted), Azure returns
   `MissingApiVersionParameter`.
 
+### Alternative: ARM template (recommended, shell-agnostic)
+
+If `az rest` keeps dropping the `?api-version` (some CLI versions and shells do this), use the
+included [budget.json](budget.json) ARM template instead. ARM supplies the api-version itself,
+so the error cannot happen, and the command is identical in Bash and PowerShell.
+
+1. Edit [budget.json](budget.json): replace `<RESOURCE_ID>` and `<EMAIL>`, and adjust the
+   amount and dates.
+2. Deploy it to the resource group that contains the Foundry resource:
+
+```
+az deployment group create --resource-group "<resource-group>" --template-file budget.json
+```
+
+This is the most reliable option to hand to a customer.
+
 ## Optional: hard stop at the cost limit
 
 A budget alert does not stop usage by itself. To enforce a cutoff, wire the budget to an

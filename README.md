@@ -28,6 +28,25 @@ In the [Microsoft Foundry portal](https://ai.azure.com):
 Change TPM later from **Deployments** > select the deployment > **Edit**, or under
 **Management** > **Model quota**.
 
+### TPM as a cost ceiling (guidance)
+
+TPM is a throughput limit, not a price. But it does set the theoretical maximum tokens the
+deployment could consume if it ran flat out. Multiply those tokens by your model's price per
+1M tokens to get a worst-case cost. Real usage is almost always far lower.
+
+| Tokens per minute (TPM) | Max tokens/hour | Max tokens/day (24h) | Max tokens/month (24/7) |
+|---|---|---|---|
+| 1,000 | 60,000 | 1.44 M | 43.2 M |
+| 10,000 | 600,000 | 14.4 M | 432 M |
+| 50,000 | 3.0 M | 72 M | 2.16 B |
+| 100,000 | 6.0 M | 144 M | 4.32 B |
+
+Example: at **10,000 TPM**, the ceiling is about **432 M tokens/month**. If your model costs
+**$5 per 1M tokens** (illustrative blended rate), the theoretical maximum is about
+**$2,160/month**. Substitute your model's actual input/output prices from the
+[Foundry pricing](https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/)
+page. Because most workloads run well below the cap, treat this as an upper bound, not a forecast.
+
 ## 2. Limit spend and get an email alert
 
 Foundry does not bill by dollars, so dollar limits live in **Cost Management**, scoped to the

@@ -197,6 +197,20 @@ az deployment group create --resource-group "<resource-group>" --template-file b
 
 This is the most reliable option to hand to a customer.
 
+### Verify the budget in the portal
+
+1. Azure portal, open the resource group that contains the Foundry resource (for example
+   `rg-admin-0578`).
+2. In the left menu, select **Cost Management**, then **Budgets**.
+3. The budget (for example `FoundryBudget`) appears with its amount, Monthly reset, and
+   current spend versus budget.
+4. Click the budget to see the **ResourceId** filter (scoped to the Foundry resource) and the
+   alert thresholds (for example 90% and 100%) with the notification emails.
+
+Alternative path: **Cost Management + Billing** > **Cost Management** > **Budgets**, then set
+the scope to the resource group. If it does not appear right away, refresh and confirm the
+Budgets blade scope matches the resource group you deployed to.
+
 ## Optional: hard stop at the cost limit
 
 A budget alert does not stop usage by itself. To enforce a cutoff, wire the budget to an

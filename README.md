@@ -65,19 +65,14 @@ az account set --subscription "<subscription-name-or-id>"
 
 The Foundry resource is a Cognitive Services account. Replace the resource group and account name:
 
-```bash
-az cognitiveservices account show \
-  --resource-group "<resource-group>" \
-  --name "<foundry-account-name>" \
-  --query id -o tsv
+```
+az cognitiveservices account show --resource-group "<resource-group>" --name "<foundry-account-name>" --query id -o tsv
 ```
 
 If you only know the name, find it across the subscription:
 
-```bash
-az resource list \
-  --query "[?type=='Microsoft.CognitiveServices/accounts'].{name:name, id:id, rg:resourceGroup}" \
-  -o table
+```
+az resource list --query "[?type=='Microsoft.CognitiveServices/accounts'].{name:name, id:id, rg:resourceGroup}" -o table
 ```
 
 ### Step 3: Create the budget with email alerts
@@ -135,6 +130,46 @@ az rest --method PUT \
   --body @budget.json
 ```
 
+> Shell note: the block above is **Bash** (variable syntax `SUB=...` and the `cat <<JSON`
+> heredoc). In Azure Cloud Shell, click **Switch to Bash** first, or use the PowerShell
+> version below. Do not mix them: pasting the Bash block into PowerShell fails with errors
+> like "Missing expression after unary operator '--'" or "is not recognized as a name of a
+> cmdlet".
+
+### Step 3 (PowerShell alternative)
+
+Same result, native to PowerShell. Note the `$` variables and the quoted `"@budget.json"`.
+
+```powershell
+$SUB         = "<subscription-id>"
+$RG          = "<resource-group>"
+$RESOURCE_ID = "<paste-resource-id-from-step-2>"
+$BUDGET_NAME = "FoundryBudget"
+$AMOUNT      = 1000
+$EMAIL       = "customer@contoso.com"
+$START       = "2026-07-01T00:00:00Z"
+$END         = "2028-06-30T00:00:00Z"
+
+$body = @"
+{
+  "properties": {
+    "category": "Cost",
+    "amount": $AMOUNT,
+    "timeGrain": "Monthly",
+    "timePeriod": { "startDate": "$START", "endDate": "$END" },
+    "filter": { "dimensions": { "name": "ResourceId", "operator": "In", "values": [ "$RESOURCE_ID" ] } },
+    "notifications": {
+      "Actual_90_Percent":  { "enabled": true, "operator": "GreaterThanOrEqualTo", "threshold": 90,  "thresholdType": "Actual", "contactEmails": [ "$EMAIL" ] },
+      "Actual_100_Percent": { "enabled": true, "operator": "GreaterThanOrEqualTo", "threshold": 100, "thresholdType": "Actual", "contactEmails": [ "$EMAIL" ] }
+    }
+  }
+}
+"@
+$body | Set-Content -Path budget.json -Encoding utf8
+
+az rest --method PUT --uri "https://management.azure.com/subscriptions/$SUB/resourceGroups/$RG/providers/Microsoft.Consumption/budgets/$BUDGET_NAME?api-version=2023-11-01" --headers "Content-Type=application/json" --body "@budget.json"
+```
+
 Notes:
 
 - The budget alerts on spend, it does not hard-stop usage.
@@ -142,7 +177,6 @@ Notes:
 - Thresholds accept 0.01 to 1000 (percent of the amount). Add a block with
   `"thresholdType": "Forecasted"` for early warning before actual spend hits the limit.
 - To budget the whole resource group instead of one resource, delete the `filter` block.
-- On Windows PowerShell, use backticks for line continuation, or run in Cloud Shell (bash) as-is.
 
 ## Optional: hard stop at the cost limit
 

@@ -50,9 +50,8 @@ Reference: [Tutorial: Create and manage budgets](https://learn.microsoft.com/azu
 
 ## 3. CLI: get the resource ID and create the budget
 
-Works in Azure Cloud Shell (bash) or the Azure CLI on any machine. Creates a budget scoped to
-a single AI Foundry resource with email alerts (the reliable way, since the portal picker only
-lists resources that already have cost).
+Get the Foundry resource ID, then create a budget scoped to that resource with email alerts
+by deploying the included ARM template. This works the same in Bash and PowerShell.
 
 ### Step 1: Sign in and select the subscription
 
@@ -75,117 +74,10 @@ If you only know the name, find it across the subscription:
 az resource list --query "[?type=='Microsoft.CognitiveServices/accounts'].{name:name, id:id, rg:resourceGroup}" -o table
 ```
 
-### Step 3: Create the budget with email alerts
+### Step 3: Create the budget (ARM template)
 
-```bash
-# --- Fill these in ---
-SUB="<subscription-id>"
-RG="<resource-group>"
-RESOURCE_ID="<paste-resource-id-from-step-2>"
-BUDGET_NAME="FoundryBudget"
-AMOUNT=1000
-EMAIL="customer@contoso.com"
-START="2026-07-01T00:00:00Z"
-END="2028-06-30T00:00:00Z"
-
-# --- Build the request body ---
-cat > budget.json <<JSON
-{
-  "properties": {
-    "category": "Cost",
-    "amount": ${AMOUNT},
-    "timeGrain": "Monthly",
-    "timePeriod": { "startDate": "${START}", "endDate": "${END}" },
-    "filter": {
-      "dimensions": {
-        "name": "ResourceId",
-        "operator": "In",
-        "values": [ "${RESOURCE_ID}" ]
-      }
-    },
-    "notifications": {
-      "Actual_90_Percent": {
-        "enabled": true,
-        "operator": "GreaterThanOrEqualTo",
-        "threshold": 90,
-        "thresholdType": "Actual",
-        "contactEmails": [ "${EMAIL}" ]
-      },
-      "Actual_100_Percent": {
-        "enabled": true,
-        "operator": "GreaterThanOrEqualTo",
-        "threshold": 100,
-        "thresholdType": "Actual",
-        "contactEmails": [ "${EMAIL}" ]
-      }
-    }
-  }
-}
-JSON
-
-# --- Create the budget ---
-az rest --method PUT \
-  --uri "https://management.azure.com/subscriptions/${SUB}/resourceGroups/${RG}/providers/Microsoft.Consumption/budgets/${BUDGET_NAME}?api-version=2023-11-01" \
-  --headers "Content-Type=application/json" \
-  --body @budget.json
-```
-
-> Shell note: the block above is **Bash** (variable syntax `SUB=...` and the `cat <<JSON`
-> heredoc). In Azure Cloud Shell, click **Switch to Bash** first, or use the PowerShell
-> version below. Do not mix them: pasting the Bash block into PowerShell fails with errors
-> like "Missing expression after unary operator '--'" or "is not recognized as a name of a
-> cmdlet".
-
-### Step 3 (PowerShell alternative)
-
-Same result, native to PowerShell. Note the `$` variables and the quoted `"@budget.json"`.
-
-```powershell
-$SUB         = "<subscription-id>"
-$RG          = "<resource-group>"
-$RESOURCE_ID = "<paste-resource-id-from-step-2>"
-$BUDGET_NAME = "FoundryBudget"
-$AMOUNT      = 1000
-$EMAIL       = "customer@contoso.com"
-$START       = "2026-07-01T00:00:00Z"
-$END         = "2028-06-30T00:00:00Z"
-
-$body = @"
-{
-  "properties": {
-    "category": "Cost",
-    "amount": $AMOUNT,
-    "timeGrain": "Monthly",
-    "timePeriod": { "startDate": "$START", "endDate": "$END" },
-    "filter": { "dimensions": { "name": "ResourceId", "operator": "In", "values": [ "$RESOURCE_ID" ] } },
-    "notifications": {
-      "Actual_90_Percent":  { "enabled": true, "operator": "GreaterThanOrEqualTo", "threshold": 90,  "thresholdType": "Actual", "contactEmails": [ "$EMAIL" ] },
-      "Actual_100_Percent": { "enabled": true, "operator": "GreaterThanOrEqualTo", "threshold": 100, "thresholdType": "Actual", "contactEmails": [ "$EMAIL" ] }
-    }
-  }
-}
-"@
-$body | Set-Content -Path budget.json -Encoding utf8
-
-az rest --method PUT --uri "https://management.azure.com/subscriptions/$SUB/resourceGroups/$RG/providers/Microsoft.Consumption/budgets/$BUDGET_NAME?api-version=2023-11-01" --headers "Content-Type=application/json" --body "@budget.json"
-```
-
-Notes:
-
-- The budget alerts on spend, it does not hard-stop usage.
-- Emails go to the addresses in `contactEmails` (up to 5).
-- Thresholds accept 0.01 to 1000 (percent of the amount). Add a block with
-  `"thresholdType": "Forecasted"` for early warning before actual spend hits the limit.
-- To budget the whole resource group instead of one resource, delete the `filter` block.
-- Keep the whole `az rest` on a single line and the URL in double quotes. If the
-  `?api-version=2023-11-01` is dropped (URL wrapped or unquoted), Azure returns
-  `MissingApiVersionParameter`.
-
-### Alternative: ARM template (recommended, shell-agnostic)
-
-If `az rest` keeps dropping the `?api-version` (some CLI versions and shells do this), use the
-included [budget.json](budget.json) ARM template instead. ARM supplies the api-version itself,
-so the error cannot happen, and the command is identical in Bash and PowerShell.
+Use the included [budget.json](budget.json) ARM template. ARM supplies the api-version itself,
+so it works identically in Bash and PowerShell.
 
 1. Edit [budget.json](budget.json): replace `<RESOURCE_ID>` and `<EMAIL>`, and adjust the
    amount and dates.
@@ -195,7 +87,11 @@ so the error cannot happen, and the command is identical in Bash and PowerShell.
 az deployment group create --resource-group "<resource-group>" --template-file budget.json
 ```
 
-This is the most reliable option to hand to a customer.
+Notes:
+
+- To budget the whole resource group instead of one resource, delete the `filter` block.
+- Add a notification block with `"thresholdType": "Forecasted"` for an early warning before
+  actual spend reaches the limit.
 
 ### Verify the budget in the portal
 

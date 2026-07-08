@@ -6,13 +6,12 @@ limiting tokens and spend, and getting email alerts when a cost threshold is rea
 ## Contents
 
 - [1. Select and deploy a model](#1-select-and-deploy-a-model)
-- [2. Limit tokens per model](#2-limit-tokens-per-model)
-- [3. Limit spend and get an email alert](#3-limit-spend-and-get-an-email-alert)
-- [4. CLI: get the resource ID and create the budget](#4-cli-get-the-resource-id-and-create-the-budget)
+- [2. Limit spend and get an email alert](#2-limit-spend-and-get-an-email-alert)
+- [3. CLI: get the resource ID and create the budget](#3-cli-get-the-resource-id-and-create-the-budget)
 - [Optional: hard stop at the cost limit](#optional-hard-stop-at-the-cost-limit)
 - [Quick decision guide](#quick-decision-guide)
 
-There are two separate levers: tokens (throughput and total quota, controlled in
+There are two separate levers: tokens (throughput, controlled per deployment in
 Foundry) and spend (dollars, controlled in Azure Cost Management). Budgets alert you,
 they do not hard-stop spend.
 
@@ -29,26 +28,7 @@ In the [Microsoft Foundry portal](https://ai.azure.com):
 Change TPM later from **Deployments** > select the deployment > **Edit**, or under
 **Management** > **Model quota**.
 
-## 2. Limit tokens per model
-
-TPM only caps per-minute burst. To cap total tokens over a period (hourly, daily, monthly),
-use the built-in AI Gateway token management:
-
-1. In Foundry, turn on the **New Foundry** toggle.
-2. **Operate** > **Admin**.
-3. In the **AI Gateway** list, select your gateway.
-4. Select **Token management** > **+ Set limit**.
-5. Pick the **project** and **deployment**, then set:
-   - **Limit (Tokens-per-minute)**: the TPM rate cap (over-limit returns 429).
-   - **Total token quota** per period (hourly/daily/weekly/monthly/yearly): a hard total
-     ceiling (over-limit returns 403 Forbidden).
-
-The total token quota is the closest thing to a hard "stop after N tokens" control, and
-because cost is driven by tokens it effectively caps spend per model.
-
-Reference: [Enforce token limits for models](https://learn.microsoft.com/azure/foundry/control-plane/how-to-enforce-limits-models#configure-token-limits).
-
-## 3. Limit spend and get an email alert
+## 2. Limit spend and get an email alert
 
 Foundry does not bill by dollars, so dollar limits live in **Cost Management**, scoped to the
 Foundry resource or its resource group:
@@ -66,9 +46,9 @@ Reference: [Tutorial: Create and manage budgets](https://learn.microsoft.com/azu
 
 > A Cost Management budget cannot target a single model deployment. The finest scope is the
 > whole Foundry (Azure AI Services) resource. For per-model dollar control, isolate the model
-> in its own resource, or use the per-deployment token quota from step 2.
+> in its own resource.
 
-## 4. CLI: get the resource ID and create the budget
+## 3. CLI: get the resource ID and create the budget
 
 Works in Azure Cloud Shell (bash) or the Azure CLI on any machine. Creates a budget scoped to
 a single AI Foundry resource with email alerts (the reliable way, since the portal picker only
@@ -168,7 +148,7 @@ Notes:
 
 A budget alert does not stop usage by itself. To enforce a cutoff, wire the budget to an
 **Action Group** that triggers a Logic App or Automation runbook which, at 100%, disables or
-deletes the model deployment (or lowers its token quota to zero).
+deletes the model deployment.
 Pattern: [Manage costs with budgets](https://learn.microsoft.com/azure/cost-management-billing/manage/cost-management-budget-scenario).
 
 ## Quick decision guide
@@ -176,6 +156,5 @@ Pattern: [Manage costs with budgets](https://learn.microsoft.com/azure/cost-mana
 | Goal | Control |
 |------|---------|
 | Cap throughput per minute | Deployment **TPM** |
-| Cap total tokens (proxy for cost, hard 403) | AI Gateway **Total token quota** |
 | Dollar email alert | **Cost Management budget** with email thresholds |
 | Hard dollar cutoff | Budget **+ action group + Logic App** to disable the deployment |
